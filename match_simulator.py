@@ -147,8 +147,8 @@ def setup_environment_for_player(player: int, source: str):
     os.makedirs(f"submission{player}/io", mode=DIRECTORY_PERMISSIONS)
     if platform.system() == "Windows":
         # lol, rofl even
-        open(f"submission{player}/io/to_engine.pipe", 'a').close()
-        open(f"submission{player}/io/from_engine.pipe", 'a').close()
+        open(f"submission{player}/io/to_engine.pipe", "rw").close()
+        open(f"submission{player}/io/from_engine.pipe", "rw").close()
     else:
         os.mkfifo(f"submission{player}/io/to_engine.pipe", mode=PIPE_PERMISSIONS)
         os.mkfifo(f"submission{player}/io/from_engine.pipe", mode=PIPE_PERMISSIONS)
