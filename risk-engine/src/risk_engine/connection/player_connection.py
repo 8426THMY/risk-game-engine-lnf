@@ -3,9 +3,13 @@ import itertools
 import json
 import math
 import random
-from signal import SIGALRM, alarm, signal
 from time import time
 from typing import Callable, Literal, Optional, ParamSpec, Type, TypeVar, Union, final
+import platform
+if platform.system() == "Windows":
+    import threading
+else:
+    from signal import SIGALRM, alarm, signal
 
 from risk_engine.censoring.censor_record import CensorRecord
 from risk_engine.game.state_mutator import StateMutator
@@ -101,15 +105,26 @@ def time_limited(error_message: str = "You took too long to respond."):
 
             def on_timeout_alarm(*_):
                 raise TimeoutException(self.player_id, error_message, query)
-            signal(SIGALRM, on_timeout_alarm)
 
-            alarm(TIMEOUT_SECONDS)
-            start = time()
+            if platform.system() == "Windows":
+                alarm = threading.Timer(TIMEOUT_SECONDS, on_timeout_alarm)
+                alarm.start()
+                start = time()
 
-            result = fn(*args, **kwargs)
+                result = fn(*args, **kwargs)
 
-            end = time()
-            alarm(0) 
+                end = time()
+                alarm.cancel() 
+            else:
+                signal(SIGALRM, on_timeout_alarm)
+
+                alarm(TIMEOUT_SECONDS)
+                start = time()
+
+                result = fn(*args, **kwargs)
+
+                end = time()
+                alarm(0) 
 
             self._cumulative_time += end - start
             if self._cumulative_time > CUMULATIVE_TIMEOUT_SECONDS:

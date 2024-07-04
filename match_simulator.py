@@ -1,10 +1,15 @@
 import json
 import shutil
-from signal import SIGKILL
 import subprocess
 import sys
 import os
 from typing import Tuple
+import platform
+if platform.system() == "Windows":
+    # lol
+    from signal import SIGTERM as SIGKILL
+else:
+    from signal import SIGKILL
 
 NUM_PLAYERS = 5
 PIPE_PERMISSIONS = 0o660
@@ -114,7 +119,7 @@ def start_submissions() -> list[int]:
         os.chdir(f"submission{player}")
 
         with open("io/submission.log", "w") as f_log, open("io/submission.err", "w") as f_err:
-            process = subprocess.Popen(["python3", "submission.py"], stdout=f_log, stderr=f_err)
+            process = subprocess.Popen([f"{sys.executable}", "submission.py"], stdout=f_log, stderr=f_err)
         
         player_pids.append(process.pid)
         print(f"[simulator]: started submission {player} (pid={process.pid}).")
@@ -126,7 +131,7 @@ def start_submissions() -> list[int]:
 def start_engine():
     print("[simulator] started engine.")
     with open("output/engine.log", "w") as f_log, open("output/engine.err", "w") as f_err:
-        process = subprocess.Popen(["python3", "-m", "risk_engine", "--print-recording-interactive"], stdout=subprocess.PIPE, stderr=f_err, text=True, universal_newlines=True, bufsize=1)
+        process = subprocess.Popen([f"{sys.executable}", "-m", "risk_engine", "--print-recording-interactive"], stdout=subprocess.PIPE, stderr=f_err, text=True, universal_newlines=True, bufsize=1)
 
         while True:
             if process.stdout is not None:
@@ -140,8 +145,13 @@ def start_engine():
 
 def setup_environment_for_player(player: int, source: str):
     os.makedirs(f"submission{player}/io", mode=DIRECTORY_PERMISSIONS)
-    os.mkfifo(f"submission{player}/io/to_engine.pipe", mode=PIPE_PERMISSIONS)
-    os.mkfifo(f"submission{player}/io/from_engine.pipe", mode=PIPE_PERMISSIONS)
+    if platform.system() == "Windows":
+        # lol, rofl even
+        open(f"submission{player}/io/to_engine.pipe", 'a').close()
+        open(f"submission{player}/io/from_engine.pipe", 'a').close()
+    else:
+        os.mkfifo(f"submission{player}/io/to_engine.pipe", mode=PIPE_PERMISSIONS)
+        os.mkfifo(f"submission{player}/io/from_engine.pipe", mode=PIPE_PERMISSIONS)
     shutil.copy(source, f"submission{player}/submission.py")
 
 
